@@ -196,9 +196,6 @@ function! flagship#cwd(...) abort
   while type(get(args, 0, '')) == type(0)
     call remove(args, 0)
   endwhile
-  if exists('buf') && index(args, 'url') >= 0 && buf =~# '^zipfile:'
-    let path = substitute(buf, '^zipfile:\|::.*', '', 'g')
-  endif
   if index(args, 'raw') < 0
     let path = s:cwdpresent(path, index(args, 'relative') >= 0)
   endif
@@ -390,7 +387,7 @@ function! flagship#statusline(...) abort
   return substitute(s, '%=', '\=s:flags("file").s:flags("buffer")."%=".s:flags("window",-1)', '')
 endfunction
 
-function! flagship#hoist(type, ...) abort
+function! flagship#_hoist(type, ...) abort
   if type(a:type) != type('') || a:type !~# '^[a-z]'
     return
   endif
@@ -413,7 +410,7 @@ function! flagship#hoist(type, ...) abort
     let s:new_flags[a:type] = []
   endif
   let flags = s:new_flags[a:type]
-  let index = index(map(copy(flags), 'v:val[1]'), args[2])
+  let index = index(map(copy(flags), 'v:val[1]'), args[1])
   if index < 0
     call add(flags, args)
   else
@@ -472,7 +469,10 @@ function! flagship#setup(...) abort
     endif
   endif
   if !exists('g:tablabel') && !exists('g:tabprefix')
-    if &showtabline == 1
+    redir => blame
+    silent verbose set showtabline?
+    redir END
+    if &showtabline == 1 && blame !~# "\t"
       set showtabline=2
     endif
     if exists('&guitablabel') && empty(&guitablabel)
@@ -506,7 +506,7 @@ function! flagship#setup(...) abort
   let modelines = &modelines
   try
     let &modelines = 0
-    let g:Hoist = function('flagship#hoist')
+    let g:Hoist = function('flagship#_hoist')
     function! Hoist(...) abort
       return call(g:Hoist, a:000)
     endfunction
